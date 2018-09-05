@@ -1,7 +1,7 @@
 <?php
 declare(strict_types = 1);
 
-namespace MatomoTracker;
+namespace Matomo;
 
 use InvalidArgumentException;
 use Psr\Http\Message\ServerRequestInterface;
@@ -26,6 +26,13 @@ use Psr\Http\Message\ServerRequestInterface;
  */
 class Tracker
 {
+    /**
+     * Used in tests to output useful error messages.
+     *
+     * @ignore
+     */
+    public static $DEBUG_LAST_REQUESTED_URL = false;
+
     private $request;
     private $apiUrl;
 
@@ -403,18 +410,6 @@ class Tracker
     }
 
     /**
-     * Get cookie name with prefix and domain hash
-     */
-    protected function getCookieName(string $cookieName): string
-    {
-        // NOTE: If the cookie name is changed, we must also update the method in piwik.js with the same name.
-        $host = $this->request->getUri()->getHost() ?: 'unknown';
-        $hash = substr(sha1(($this->configCookieDomain === '' ? $host : $this->configCookieDomain) . $this->configCookiePath), 0, 4);
-
-        return self::FIRST_PARTY_COOKIES_PREFIX . $cookieName . '.' . $this->idSite . '.' . $hash;
-    }
-
-    /**
      * Tracks a page view
      *
      * @param  string $documentTitle Page title as it will appear in the Actions > Page titles report
@@ -427,11 +422,6 @@ class Tracker
         $url = $this->getUrlTrackPageView($documentTitle);
 
         return $this->sendRequest($url);
-    }
-
-    private function generateNewPageviewId()
-    {
-        $this->idPageview = substr(md5(uniqid(rand(), true)), 0, 6);
     }
 
     /**
@@ -553,7 +543,7 @@ class Tracker
             throw new InvalidArgumentException('You must specify a SKU for the Ecommerce item');
         }
 
-        $price = $this->forceDotAsSeparatorForDecimalPoint($price);
+        $price = self::forceDotAsSeparatorForDecimalPoint($price);
 
         $this->ecommerceItems[] = [$sku, $name, $category, $price, $quantity];
     }
@@ -685,7 +675,7 @@ class Tracker
 
         if (!empty($price)) {
             $price = (float) $price;
-            $price = $this->forceDotAsSeparatorForDecimalPoint($price);
+            $price = self::forceDotAsSeparatorForDecimalPoint($price);
             $this->pageCustomVar[self::CVAR_INDEX_ECOMMERCE_ITEM_PRICE] = ['_pkp', $price];
         }
 
@@ -701,22 +691,6 @@ class Tracker
         }
         $this->pageCustomVar[self::CVAR_INDEX_ECOMMERCE_ITEM_NAME] = ['_pkn', $name];
         return $this;
-    }
-
-    /**
-     * Force the separator for decimal point to be a dot. See https://github.com/piwik/piwik/issues/6435
-     * If for instance a German locale is used it would be a comma otherwise.
-     *
-     * @param  float|string $value
-     * @return string
-     */
-    private function forceDotAsSeparatorForDecimalPoint($value): string
-    {
-        if (null === $value || false === $value) {
-            return $value;
-        }
-
-        return str_replace(',', '.', $value);
     }
 
     /**
@@ -757,55 +731,6 @@ class Tracker
         $url = $this->getUrlTrackEcommerce($grandTotal, $subTotal, $tax, $shipping, $discount);
         $url .= '&ec_id=' . urlencode($orderId);
         $this->ecommerceLastOrderTimestamp = $this->getTimestamp();
-
-        return $url;
-    }
-
-    /**
-     * Returns URL used to track Ecommerce orders
-     *
-     * Calling this function will reinitializes the property ecommerceItems to empty array
-     * so items will have to be added again via addEcommerceItem()
-     *
-     * @ignore
-     * @param mixed $grandTotal
-     * @param mixed $subTotal
-     * @param mixed $tax
-     * @param mixed $shipping
-     * @param mixed $discount
-     */
-    protected function getUrlTrackEcommerce($grandTotal, $subTotal = 0.0, $tax = 0.0, $shipping = 0.0, $discount = 0.0): string
-    {
-        if (!is_numeric($grandTotal)) {
-            throw new Exception('You must specifiy a grandTotal for the Ecommerce order (or Cart update)');
-        }
-
-        $url = $this->getRequest($this->idSite);
-        $url .= '&idgoal=0';
-        if (!empty($grandTotal)) {
-            $grandTotal = $this->forceDotAsSeparatorForDecimalPoint($grandTotal);
-            $url .= '&revenue=' . $grandTotal;
-        }
-        if (!empty($subTotal)) {
-            $subTotal = $this->forceDotAsSeparatorForDecimalPoint($subTotal);
-            $url .= '&ec_st=' . $subTotal;
-        }
-        if (!empty($tax)) {
-            $tax = $this->forceDotAsSeparatorForDecimalPoint($tax);
-            $url .= '&ec_tx=' . $tax;
-        }
-        if (!empty($shipping)) {
-            $shipping = $this->forceDotAsSeparatorForDecimalPoint($shipping);
-            $url .= '&ec_sh=' . $shipping;
-        }
-        if (!empty($discount)) {
-            $discount = $this->forceDotAsSeparatorForDecimalPoint($discount);
-            $url .= '&ec_dt=' . $discount;
-        }
-        if (!empty($this->ecommerceItems)) {
-            $url .= '&ec_items=' . urlencode(json_encode($this->ecommerceItems));
-        }
-        $this->ecommerceItems = [];
 
         return $url;
     }
@@ -855,7 +780,7 @@ class Tracker
             $url .= '&e_n=' . urlencode($name);
         }
         if (strlen($value) > 0) {
-            $value = $this->forceDotAsSeparatorForDecimalPoint($value);
+            $value = self::forceDotAsSeparatorForDecimalPoint($value);
             $url .= '&e_v=' . $value;
         }
 
@@ -960,7 +885,7 @@ class Tracker
         $url = $this->getRequest($this->idSite);
         $url .= '&idgoal=' . $idGoal;
         if (!empty($revenue)) {
-            $revenue = $this->forceDotAsSeparatorForDecimalPoint($revenue);
+            $revenue = self::forceDotAsSeparatorForDecimalPoint($revenue);
             $url .= '&revenue=' . $revenue;
         }
 
@@ -1134,35 +1059,6 @@ class Tracker
     }
 
     /**
-     * Loads values from the VisitorId Cookie
-     *
-     * @return bool True if cookie exists and is valid, False otherwise
-     */
-    protected function loadVisitorIdCookie(): bool
-    {
-        $idCookie = $this->getCookieMatchingName('id');
-        if ($idCookie === false) {
-            return false;
-        }
-        $parts = explode('.', $idCookie);
-        if (strlen($parts[0]) != self::LENGTH_VISITOR_ID) {
-            return false;
-        }
-        /* $this->cookieVisitorId provides backward compatibility since getVisitorId()
-        didn't change any existing VisitorId value */
-        $this->cookieVisitorId = $parts[0];
-        $this->createTs = $parts[1];
-        $this->visitCount = (int) $parts[2];
-        $this->currentVisitTs = $parts[3];
-        $this->lastVisitTs = $parts[4];
-        if (isset($parts[5])) {
-            $this->ecommerceLastOrderTimestamp = $parts[5];
-        }
-
-        return true;
-    }
-
-    /**
      * Deletes all first party cookies from the client
      */
     public function deleteCookies()
@@ -1324,6 +1220,33 @@ class Tracker
     }
 
     /**
+     * Sets a cookie to be sent to the tracking server.
+     *
+     * @param $name
+     * @param $value
+     */
+    public function setOutgoingTrackerCookie($name, $value)
+    {
+        if ($value === null) {
+            unset($this->outgoingTrackerCookies[$name]);
+        } else {
+            $this->outgoingTrackerCookies[$name] = $value;
+        }
+    }
+
+    /**
+     * Gets a cookie which was set by the tracking server.
+     *
+     * @param $name
+     *
+     * @return null|string
+     */
+    public function getIncomingTrackerCookie($name)
+    {
+        return $this->incomingTrackerCookies[$name] ?? null;
+    }
+
+    /**
      * If the proxy IP and the proxy port have been set, with the setProxy() function
      * returns a string, like "173.234.92.107:80"
      */
@@ -1336,17 +1259,10 @@ class Tracker
     }
 
     /**
-     * Used in tests to output useful error messages.
-     *
-     * @ignore
-     */
-    public static $DEBUG_LAST_REQUESTED_URL = false;
-
-    /**
      * @ignore
      * @param null|mixed $data
      */
-    protected function sendRequest(string $url, string $method = 'GET', $data = null, bool $force = false)
+    private function sendRequest(string $url, string $method = 'GET', $data = null, bool $force = false)
     {
         self::$DEBUG_LAST_REQUESTED_URL = $url;
 
@@ -1373,89 +1289,18 @@ class Tracker
 
         $proxy = $this->getProxy();
 
-        if (function_exists('curl_init') && function_exists('curl_exec')) {
-            $options = [
-                CURLOPT_URL => $url,
-                CURLOPT_USERAGENT => $userAgent,
-                CURLOPT_HEADER => true,
-                CURLOPT_TIMEOUT => $this->requestTimeout,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_HTTPHEADER => [
-                    'Accept-Language: ' . $acceptLanguage,
-                ],
-            ];
+        $client = new HttpClient($method, $url);
 
-            if (defined('PATH_TO_CERTIFICATES_FILE')) {
-                $options[CURLOPT_CAINFO] = PATH_TO_CERTIFICATES_FILE;
-            }
+        $client->setUserAgent($userAgent)
+            ->setData($data)
+            ->setTimeout($this->requestTimeout)
+            ->setAcceptLanguage($this->acceptLanguage)
+            ->setProxy($proxy)
+            ->setCookies($this->outgoingTrackerCookies);
 
-            if (isset($proxy)) {
-                $options[CURLOPT_PROXY] = $proxy;
-            }
+        $client->send();
 
-            switch ($method) {
-                case 'POST':
-                    $options[CURLOPT_POST] = true;
-                    break;
-                default:
-                    break;
-            }
-
-            // only supports JSON data
-            if (!empty($data)) {
-                $options[CURLOPT_HTTPHEADER][] = 'Content-Type: application/json';
-                $options[CURLOPT_HTTPHEADER][] = 'Expect:';
-                $options[CURLOPT_POSTFIELDS] = $data;
-            }
-
-            if (!empty($this->outgoingTrackerCookies)) {
-                $options[CURLOPT_COOKIE] = http_build_query($this->outgoingTrackerCookies);
-                $this->outgoingTrackerCookies = [];
-            }
-
-            $ch = curl_init();
-            curl_setopt_array($ch, $options);
-            ob_start();
-            $response = @curl_exec($ch);
-            ob_end_clean();
-            $header = '';
-            $content = '';
-            if (!empty($response)) {
-                list($header, $content) = explode("\r\n\r\n", $response, $limitCount = 2);
-            }
-
-            $this->parseIncomingCookies(explode("\r\n", $header));
-        } elseif (function_exists('stream_context_create')) {
-            $stream_options = [
-                'http' => [
-                    'method' => $method,
-                    'user_agent' => $userAgent,
-                    'header' => 'Accept-Language: ' . $acceptLanguage . "\r\n",
-                    'timeout' => $this->requestTimeout, // PHP 5.2.1
-                ],
-            ];
-
-            if (isset($proxy)) {
-                $stream_options['http']['proxy'] = $proxy;
-            }
-
-            // only supports JSON data
-            if (!empty($data)) {
-                $stream_options['http']['header'] .= "Content-Type: application/json \r\n";
-                $stream_options['http']['content'] = $data;
-            }
-
-            if (!empty($this->outgoingTrackerCookies)) {
-                $stream_options['http']['header'] .= 'Cookie: ' . http_build_query($this->outgoingTrackerCookies) . "\r\n";
-                $this->outgoingTrackerCookies = [];
-            }
-
-            $ctx = stream_context_create($stream_options);
-            $response = file_get_contents($url, 0, $ctx);
-            $content = $response;
-
-            $this->parseIncomingCookies($http_response_header);
-        }
+        $this->incomingTrackerCookies = $client->getCookies();
 
         return $content;
     }
@@ -1464,17 +1309,15 @@ class Tracker
      * Returns current timestamp, or forced timestamp/datetime if it was set
      * @return string|int
      */
-    protected function getTimestamp()
+    private function getTimestamp()
     {
-        return !empty($this->forcedDatetime)
-            ? strtotime($this->forcedDatetime)
-            : time();
+        return !empty($this->forcedDatetime) ? strtotime($this->forcedDatetime) : time();
     }
 
     /**
      * Returns the base URL for the piwik server.
      */
-    protected function getBaseUrl(): string
+    private function getBaseUrl(): string
     {
         if (empty($this->apiUrl)) {
             throw new Exception(
@@ -1494,7 +1337,7 @@ class Tracker
     /**
      * @ignore
      */
-    protected function getRequest(int $idSite)
+    private function getRequest(int $idSite)
     {
         $this->setFirstPartyCookies();
 
@@ -1505,77 +1348,79 @@ class Tracker
 
         $getParams = $this->request->getQueryParams();
 
-        $url = $this->getBaseUrl() .
-            '?idsite=' . $idSite .
-            '&rec=1' .
-            '&apiv=' . self::VERSION .
-            '&r=' . substr(strval(mt_rand()), 2, 6) .
+        $query = self::buildQuery([
+            'idsite' => $idSite,
+            'rec' => 1,
+            'apiv' => self::VERSION,
+            '&r' => substr(strval(mt_rand()), 2, 6),
 
             // XDEBUG_SESSIONS_START and KEY are related to the PHP Debugger, this can be ignored in other languages
-            (!empty($getParams['XDEBUG_SESSION_START']) ?
-                '&XDEBUG_SESSION_START=' . @urlencode($getParams['XDEBUG_SESSION_START']) : '') .
-            (!empty($getParams['KEY']) ? '&KEY=' . @urlencode($getParams['KEY']) : '') .
+            'XDEBUG_SESSION_START' => $getParams['XDEBUG_SESSION_START'] ?? null,
+            'KEY' => $getParams['KEY'] ?? null,
 
             // Only allowed for Admin/Super User, token_auth required,
-            (!empty($this->ip) ? '&cip=' . $this->ip : '') .
-            (!empty($this->userId) ? '&uid=' . urlencode($this->userId) : '') .
-            (!empty($this->forcedDatetime) ? '&cdt=' . urlencode($this->forcedDatetime) : '') .
-            (!empty($this->forcedNewVisit) ? '&new_visit=1' : '') .
-            ((!empty($this->token_auth) && !$this->doBulkRequests) ?
-                '&token_auth=' . urlencode($this->token_auth) : '') .
+            'cip' => $this->ip,
+            'uid' => $this->userId,
+            'cdt' => $this->forcedDatetime,
+            'new_visit' => 1,
+            'token_auth' => (!empty($this->token_auth) && !$this->doBulkRequests) ? $this->token_auth : null,
 
             // Values collected from cookie
-            '&_idts=' . $this->createTs .
-            '&_idvc=' . $this->visitCount .
-            (!empty($this->lastVisitTs) ? '&_viewts=' . $this->lastVisitTs : '') .
-            (!empty($this->ecommerceLastOrderTimestamp) ?
-                '&_ects=' . urlencode($this->ecommerceLastOrderTimestamp) : '') .
+            '_idts' => $this->createTs,
+            '_idvc' => $this->visitCount,
+            '_viewts' => $this->lastVisitTs ?? null,
+            '_ects' => $this->ecommerceLastOrderTimestamp ?? null,
 
             // These parameters are set by the JS, but optional when using API
-            (!empty($this->plugins) ? $this->plugins : '') .
-            (($this->localHour !== false && $this->localMinute !== false && $this->localSecond !== false) ?
-                '&h=' . $this->localHour . '&m=' . $this->localMinute . '&s=' . $this->localSecond : '') .
-            (!empty($this->width) && !empty($this->height) ? '&res=' . $this->width . 'x' . $this->height : '') .
-            (!empty($this->hasCookies) ? '&cookie=' . $this->hasCookies : '') .
+            //(!empty($this->plugins) ? $this->plugins : '') .
+            'h' => $this->localHour,
+            'm' => $this->localMinute,
+            's' => $this->localSecond,
+            'res' => (!empty($this->width) && !empty($this->height)) ? $this->width . 'x' . $this->height : null,
+            'cookie' => $this->hasCookies,
 
             // Various important attributes
-            (!empty($this->customData) ? '&data=' . $this->customData : '') .
-            (!empty($this->visitorCustomVar) ? '&_cvar=' . urlencode(json_encode($this->visitorCustomVar)) : '') .
-            (!empty($this->pageCustomVar) ? '&cvar=' . urlencode(json_encode($this->pageCustomVar)) : '') .
-            (!empty($this->eventCustomVar) ? '&e_cvar=' . urlencode(json_encode($this->eventCustomVar)) : '') .
-            (!empty($this->generationTime) ? '&gt_ms=' . ((int) $this->generationTime) : '') .
-            (!empty($this->forcedVisitorId) ? '&cid=' . $this->forcedVisitorId : '&_id=' . $this->getVisitorId()) .
+            'data' => $this->customData,
+            '_cvar' => $this->visitorCustomVar,
+            'cvar' => $this->pageCustomVar,
+            'e_cvar' => $this->eventCustomVar,
+            'gt_ms' => (int) $this->generationTime,
+
+            //( ? (!empty($this->forcedVisitorId) ? 'cid' => $this->forcedVisitorId : '&_id=' . $this->getVisitorId())
 
             // URL parameters
-            '&url=' . urlencode((string) $this->request->getUri()) .
-            '&urlref=' . urlencode((string) $this->request->getHeaderLine('Referer')) .
-            ((!empty($this->pageCharset) && $this->pageCharset != self::DEFAULT_CHARSET_PARAMETER_VALUES) ?
-                '&cs=' . $this->pageCharset : '') .
+            'url' => (string) $this->request->getUri(),
+            'urlref' => $this->request->getHeaderLine('Referer'),
+            'cs' => (!empty($this->pageCharset) && $this->pageCharset != self::DEFAULT_CHARSET_PARAMETER_VALUES) ? $this->pageCharset : null,
 
             // unique pageview id
-            (!empty($this->idPageview) ? '&pv_id=' . urlencode($this->idPageview) : '') .
+            'pv_id' => $this->idPageview,
 
             // Attribution information, so that Goal conversions are attributed to the right referrer or campaign
             // Campaign name
-            (!empty($this->attributionInfo[0]) ? '&_rcn=' . urlencode($this->attributionInfo[0]) : '') .
+            '_rcn' => $this->attributionInfo[0] ?? null,
             // Campaign keyword
-            (!empty($this->attributionInfo[1]) ? '&_rck=' . urlencode($this->attributionInfo[1]) : '') .
+            '_rck' => $this->attributionInfo[1] ?? null,
             // Timestamp at which the referrer was set
-            (!empty($this->attributionInfo[2]) ? '&_refts=' . $this->attributionInfo[2] : '') .
+            '_refts' => $this->attributionInfo[2] ?? null,
             // Referrer URL
-            (!empty($this->attributionInfo[3]) ? '&_ref=' . urlencode($this->attributionInfo[3]) : '') .
+            '_ref' => $this->attributionInfo[3] ?? null,
 
             // custom location info
-            (!empty($this->country) ? '&country=' . urlencode($this->country) : '') .
-            (!empty($this->region) ? '&region=' . urlencode($this->region) : '') .
-            (!empty($this->city) ? '&city=' . urlencode($this->city) : '') .
-            (!empty($this->lat) ? '&lat=' . urlencode($this->lat) : '') .
-            (!empty($this->long) ? '&long=' . urlencode($this->long) : '') .
-            $customFields .
-            (!$this->sendImageResponse ? '&send_image=0' : '') .
+            'country' => $this->country,
+            'region' => $this->region,
+            'city' => $this->city,
+            'lat' => $this->lat,
+            'long' => $this->long,
+
+            //$customFields .
+            //(!$this->sendImageResponse ? '&send_image=0' : '') .
 
             // DEBUG
-            $this->DEBUG_APPEND_URL;
+            //$this->DEBUG_APPEND_URL;
+        ]);
+
+        $url = $this->getBaseUrl().$query;
 
         // Reset page level custom variables after this page view
         $this->pageCustomVar = [];
@@ -1594,7 +1439,7 @@ class Tracker
      * @return string String value of cookie, or false if not found
      * @ignore
      */
-    protected function getCookieMatchingName(string $name)
+    private function getCookieMatchingName(string $name)
     {
         if ($this->configCookiesDisabled) {
             return false;
@@ -1621,7 +1466,7 @@ class Tracker
      * Sets the first party cookies as would the piwik.js
      * All cookies are supported: 'id' and 'ses' and 'ref' and 'cvar' cookies.
      */
-    protected function setFirstPartyCookies(): self
+    private function setFirstPartyCookies(): self
     {
         if ($this->configCookiesDisabled) {
             return $this;
@@ -1660,7 +1505,7 @@ class Tracker
      * @param $cookieValue
      * @param $cookieTTL
      */
-    protected function setCookie($cookieName, $cookieValue, $cookieTTL): self
+    private function setCookie($cookieName, $cookieValue, $cookieTTL): self
     {
         $cookieExpire = $this->currentTs + $cookieTTL;
         if (!headers_sent()) {
@@ -1678,9 +1523,10 @@ class Tracker
     /**
      * @return bool|mixed
      */
-    protected function getCustomVariablesFromCookie()
+    private function getCustomVariablesFromCookie()
     {
         $cookie = $this->getCookieMatchingName('cvar');
+
         if (!$cookie) {
             return false;
         }
@@ -1689,60 +1535,124 @@ class Tracker
     }
 
     /**
-     * Sets a cookie to be sent to the tracking server.
+     * Loads values from the VisitorId Cookie
      *
-     * @param $name
-     * @param $value
+     * @return bool True if cookie exists and is valid, False otherwise
      */
-    public function setOutgoingTrackerCookie($name, $value)
+    private function loadVisitorIdCookie(): bool
     {
-        if ($value === null) {
-            unset($this->outgoingTrackerCookies[$name]);
-        } else {
-            $this->outgoingTrackerCookies[$name] = $value;
+        $idCookie = $this->getCookieMatchingName('id');
+        if ($idCookie === false) {
+            return false;
         }
+        $parts = explode('.', $idCookie);
+        if (strlen($parts[0]) != self::LENGTH_VISITOR_ID) {
+            return false;
+        }
+        /* $this->cookieVisitorId provides backward compatibility since getVisitorId()
+        didn't change any existing VisitorId value */
+        $this->cookieVisitorId = $parts[0];
+        $this->createTs = $parts[1];
+        $this->visitCount = (int) $parts[2];
+        $this->currentVisitTs = $parts[3];
+        $this->lastVisitTs = $parts[4];
+        if (isset($parts[5])) {
+            $this->ecommerceLastOrderTimestamp = $parts[5];
+        }
+
+        return true;
     }
 
     /**
-     * Gets a cookie which was set by the tracking server.
-     *
-     * @param $name
-     *
-     * @return bool|string
+     * Get cookie name with prefix and domain hash
      */
-    public function getIncomingTrackerCookie($name)
+    private function getCookieName(string $cookieName): string
     {
-        if (isset($this->incomingTrackerCookies[$name])) {
-            return $this->incomingTrackerCookies[$name];
-        }
+        // NOTE: If the cookie name is changed, we must also update the method in piwik.js with the same name.
+        $host = $this->request->getUri()->getHost() ?: 'unknown';
+        $hash = substr(sha1(($this->configCookieDomain === '' ? $host : $this->configCookieDomain) . $this->configCookiePath), 0, 4);
 
-        return false;
+        return self::FIRST_PARTY_COOKIES_PREFIX . $cookieName . '.' . $this->idSite . '.' . $hash;
     }
 
     /**
-     * Reads incoming tracking server cookies.
+     * Returns URL used to track Ecommerce orders
      *
-     * @param $headers Array with HTTP response headers as values
+     * Calling this function will reinitializes the property ecommerceItems to empty array
+     * so items will have to be added again via addEcommerceItem()
+     *
+     * @ignore
+     * @param mixed $grandTotal
+     * @param mixed $subTotal
+     * @param mixed $tax
+     * @param mixed $shipping
+     * @param mixed $discount
      */
-    protected function parseIncomingCookies(array $headers)
+    private function getUrlTrackEcommerce($grandTotal, $subTotal = 0.0, $tax = 0.0, $shipping = 0.0, $discount = 0.0): string
     {
-        $this->incomingTrackerCookies = [];
-
-        if (!empty($headers)) {
-            $headerName = 'set-cookie:';
-            $headerNameLength = strlen($headerName);
-
-            foreach ($headers as $header) {
-                if (strpos(strtolower($header), $headerName) !== 0) {
-                    continue;
-                }
-                $cookies = trim(substr($header, $headerNameLength));
-                $posEnd = strpos($cookies, ';');
-                if ($posEnd !== false) {
-                    $cookies = substr($cookies, 0, $posEnd);
-                }
-                parse_str($cookies, $this->incomingTrackerCookies);
-            }
+        if (!is_numeric($grandTotal)) {
+            throw new Exception('You must specifiy a grandTotal for the Ecommerce order (or Cart update)');
         }
+
+        $url = $this->getRequest($this->idSite);
+        $url .= '&idgoal=0';
+        if (!empty($grandTotal)) {
+            $grandTotal = self::forceDotAsSeparatorForDecimalPoint($grandTotal);
+            $url .= '&revenue=' . $grandTotal;
+        }
+        if (!empty($subTotal)) {
+            $subTotal = self::forceDotAsSeparatorForDecimalPoint($subTotal);
+            $url .= '&ec_st=' . $subTotal;
+        }
+        if (!empty($tax)) {
+            $tax = self::forceDotAsSeparatorForDecimalPoint($tax);
+            $url .= '&ec_tx=' . $tax;
+        }
+        if (!empty($shipping)) {
+            $shipping = self::forceDotAsSeparatorForDecimalPoint($shipping);
+            $url .= '&ec_sh=' . $shipping;
+        }
+        if (!empty($discount)) {
+            $discount = self::forceDotAsSeparatorForDecimalPoint($discount);
+            $url .= '&ec_dt=' . $discount;
+        }
+        if (!empty($this->ecommerceItems)) {
+            $url .= '&ec_items=' . urlencode(json_encode($this->ecommerceItems));
+        }
+        $this->ecommerceItems = [];
+
+        return $url;
+    }
+
+    private function generateNewPageviewId()
+    {
+        $this->idPageview = substr(md5(uniqid(rand(), true)), 0, 6);
+    }
+
+    /**
+     * Force the separator for decimal point to be a dot. See https://github.com/piwik/piwik/issues/6435
+     * If for instance a German locale is used it would be a comma otherwise.
+     *
+     * @param  float|string $value
+     * @return string
+     */
+    private static function forceDotAsSeparatorForDecimalPoint($value): string
+    {
+        if (null === $value || false === $value) {
+            return $value;
+        }
+
+        return str_replace(',', '.', $value);
+    }
+
+    private static function buildQuery(array $params): string
+    {
+        $params = array_filter($params);
+
+        if (empty($params)) {
+            return '';
+        }
+
+        return '?'.http_build_query($params);
     }
 }
