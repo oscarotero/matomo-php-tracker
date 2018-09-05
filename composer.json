@@ -17,13 +17,19 @@
         "source": "https://github.com/piwik/piwik-php-tracker"
     },
     "autoload": {
-        "classmap": ["."]
+        "psr-4": {
+            "MatomoTracker\\": "src/"
+        }
     },
     "require-dev": {
         "middlewares/utils": "^2.1",
-        "nyholm/psr7": "^1.0"
+        "nyholm/psr7": "^1.0",
+        "friendsofphp/php-cs-fixer": "^2.13"
     },
     "require": {
         "psr/http-message": "^1.0"
+    },
+    "scripts": {
+        "cs-fix": "php-cs-fixer fix ."
     }
 }

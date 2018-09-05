@@ -1,6 +1,8 @@
 <?php
 declare(strict_types = 1);
 
+namespace MatomoTracker;
+
 use Psr\Http\Message\ServerRequestInterface;
 use InvalidArgumentException;
 
@@ -24,7 +26,7 @@ use InvalidArgumentException;
  * @package PiwikTracker
  * @api
  */
-class PiwikTracker
+class Tracker
 {
     private $request;
     private $apiUrl;
