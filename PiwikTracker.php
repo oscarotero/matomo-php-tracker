@@ -39,7 +39,6 @@ class PiwikTracker
     public $customData = false;
     public $hasCookies = false;
     public $token_auth = false;
-    public $userAgent = false;
     public $country = false;
     public $region = false;
     public $city = false;
@@ -126,8 +125,6 @@ class PiwikTracker
         $this->idSite = $idSite;
         $this->pageCharset = self::DEFAULT_CHARSET_PARAMETER_VALUES;
         $this->ip = $server['REMOTE_ADDR'] ?? '';
-        $this->acceptLanguage = $server['HTTP_ACCEPT_LANGUAGE'] ?? '';
-        $this->userAgent = $request->getHeaderLine('User-Agent');
         $this->apiUrl = $apiUrl;
 
         $this->setNewVisitorId();
@@ -324,25 +321,6 @@ class PiwikTracker
     public function setIdSite(id $idSite): self
     {
         $this->idSite = $idSite;
-        return $this;
-    }
-
-    /**
-     * Sets the Browser language. Used to guess visitor countries when GeoIP is not enabled
-     */
-    public function setBrowserLanguage(string $acceptLanguage): self
-    {
-        $this->acceptLanguage = $acceptLanguage;
-        return $this;
-    }
-
-    /**
-     * Sets the user agent, used to detect OS and browser.
-     * If this function is not called, the User Agent will default to the current user agent.
-     */
-    public function setUserAgent(string $userAgent): self
-    {
-        $this->userAgent = $userAgent;
         return $this;
     }
 
@@ -1173,14 +1151,6 @@ class PiwikTracker
     }
 
     /**
-     * Returns the currently set user agent.
-     */
-    public function getUserAgent(): string
-    {
-        return $this->userAgent;
-    }
-
-    /**
      * Returns the currently set IP address.
      */
     public function getIp(): string
@@ -1414,18 +1384,23 @@ class PiwikTracker
     {
         self::$DEBUG_LAST_REQUESTED_URL = $url;
 
+        $acceptLanguage = $this->request->getHeaderLine('Accept-Language');
+        $userAgent = $this->request->getHeaderLine('User-Agent');
+
         // if doing a bulk request, store the url
         if ($this->doBulkRequests && !$force) {
-            $this->storedTrackingActions[]
-                = $url
-                . (!empty($this->userAgent) ? ('&ua=' . urlencode($this->userAgent)) : '')
-                . (!empty($this->acceptLanguage) ? ('&lang=' . urlencode($this->acceptLanguage)) : '');
+            if (empty($this->storedTrackingActions)) {
+                $this->storedTrackingActions[]
+                    = $url
+                    . (!empty($userAgent) ? ('&ua=' . urlencode($userAgent)) : '')
+                    . (!empty($acceptLanguage) ? ('&lang=' . urlencode($acceptLanguage)) : '');
+            } else {
+                $this->storedTrackingActions[] = $url;
+            }
 
             // Clear custom variables so they don't get copied over to other users in the bulk request
             $this->clearCustomVariables();
             $this->clearCustomTrackingParameters();
-            $this->userAgent = false;
-            $this->acceptLanguage = false;
 
             return true;
         }
@@ -1435,12 +1410,12 @@ class PiwikTracker
         if (function_exists('curl_init') && function_exists('curl_exec')) {
             $options = [
                 CURLOPT_URL => $url,
-                CURLOPT_USERAGENT => $this->userAgent,
+                CURLOPT_USERAGENT => $userAgent,
                 CURLOPT_HEADER => true,
                 CURLOPT_TIMEOUT => $this->requestTimeout,
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_HTTPHEADER => [
-                    'Accept-Language: ' . $this->acceptLanguage,
+                    'Accept-Language: ' . $acceptLanguage,
                 ],
             ];
 
@@ -1489,8 +1464,8 @@ class PiwikTracker
             $stream_options = [
                 'http' => [
                     'method' => $method,
-                    'user_agent' => $this->userAgent,
-                    'header' => "Accept-Language: " . $this->acceptLanguage . "\r\n",
+                    'user_agent' => $userAgent,
+                    'header' => "Accept-Language: " . $acceptLanguage . "\r\n",
                     'timeout' => $this->requestTimeout, // PHP 5.2.1
                 ],
             ];
