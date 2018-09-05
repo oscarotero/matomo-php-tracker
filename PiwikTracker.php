@@ -146,14 +146,14 @@ class PiwikTracker
         // Allow debug while blocking the request
         $this->requestTimeout = 600;
         $this->doBulkRequests = false;
-        $this->storedTrackingActions = array();
+        $this->storedTrackingActions = [];
 
         $this->sendImageResponse = true;
 
         $this->visitorCustomVar = $this->getCustomVariablesFromCookie();
         
-        $this->outgoingTrackerCookies = array();
-        $this->incomingTrackerCookies = array();
+        $this->outgoingTrackerCookies = [];
+        $this->incomingTrackerCookies = [];
     }
 
     /**
@@ -217,11 +217,11 @@ class PiwikTracker
             throw new Exception("Parameter id to setCustomVariable should be an integer");
         }
         if ($scope == 'page') {
-            $this->pageCustomVar[$id] = array($name, $value);
+            $this->pageCustomVar[$id] = [$name, $value];
         } elseif ($scope == 'event') {
-            $this->eventCustomVar[$id] = array($name, $value);
+            $this->eventCustomVar[$id] = [$name, $value];
         } elseif ($scope == 'visit') {
-            $this->visitorCustomVar[$id] = array($name, $value);
+            $this->visitorCustomVar[$id] = [$name, $value];
         } else {
             throw new Exception("Invalid 'scope' parameter value");
         }
@@ -278,9 +278,9 @@ class PiwikTracker
      */
     public function clearCustomVariables()
     {
-        $this->visitorCustomVar = array();
-        $this->pageCustomVar = array();
-        $this->eventCustomVar = array();
+        $this->visitorCustomVar = [];
+        $this->pageCustomVar = [];
+        $this->eventCustomVar = [];
     }
 
     /**
@@ -303,7 +303,7 @@ class PiwikTracker
      */
     public function clearCustomTrackingParameters()
     {
-        $this->customParameters = array();
+        $this->customParameters = [];
     }
 
     /**
@@ -619,7 +619,7 @@ class PiwikTracker
 
         $price = $this->forceDotAsSeparatorForDecimalPoint($price);
 
-        $this->ecommerceItems[] = array($sku, $name, $category, $price, $quantity);
+        $this->ecommerceItems[] = [$sku, $name, $category, $price, $quantity];
     }
 
     /**
@@ -656,7 +656,7 @@ class PiwikTracker
             );
         }
 
-        $data = array('requests' => $this->storedTrackingActions);
+        $data = ['requests' => $this->storedTrackingActions];
 
         // token_auth is not required by default, except if bulk_requests_require_authentication=1
         if (!empty($this->token_auth)) {
@@ -666,7 +666,7 @@ class PiwikTracker
         $postData = json_encode($data);
         $response = $this->sendRequest($this->getBaseUrl(), 'POST', $postData, $force = true);
 
-        $this->storedTrackingActions = array();
+        $this->storedTrackingActions = [];
 
         return $response;
     }
@@ -746,12 +746,12 @@ class PiwikTracker
         } else {
             $category = "";
         }
-        $this->pageCustomVar[self::CVAR_INDEX_ECOMMERCE_ITEM_CATEGORY] = array('_pkc', $category);
+        $this->pageCustomVar[self::CVAR_INDEX_ECOMMERCE_ITEM_CATEGORY] = ['_pkc', $category];
 
         if (!empty($price)) {
             $price = (float)$price;
             $price = $this->forceDotAsSeparatorForDecimalPoint($price);
-            $this->pageCustomVar[self::CVAR_INDEX_ECOMMERCE_ITEM_PRICE] = array('_pkp', $price);
+            $this->pageCustomVar[self::CVAR_INDEX_ECOMMERCE_ITEM_PRICE] = ['_pkp', $price];
         }
 
         // On a category page, do not record "Product name not defined"
@@ -759,12 +759,12 @@ class PiwikTracker
             return $this;
         }
         if (!empty($sku)) {
-            $this->pageCustomVar[self::CVAR_INDEX_ECOMMERCE_ITEM_SKU] = array('_pks', $sku);
+            $this->pageCustomVar[self::CVAR_INDEX_ECOMMERCE_ITEM_SKU] = ['_pks', $sku];
         }
         if (empty($name)) {
             $name = "";
         }
-        $this->pageCustomVar[self::CVAR_INDEX_ECOMMERCE_ITEM_NAME] = array('_pkn', $name);
+        $this->pageCustomVar[self::CVAR_INDEX_ECOMMERCE_ITEM_NAME] = ['_pkn', $name];
         return $this;
     }
 
@@ -861,7 +861,7 @@ class PiwikTracker
         if (!empty($this->ecommerceItems)) {
             $url .= '&ec_items=' . urlencode(json_encode($this->ecommerceItems));
         }
-        $this->ecommerceItems = array();
+        $this->ecommerceItems = [];
 
         return $url;
     }
@@ -1231,7 +1231,7 @@ class PiwikTracker
      */
     public function deleteCookies()
     {
-        $cookies = array('id', 'ses', 'cvar', 'ref');
+        $cookies = ['id', 'ses', 'cvar', 'ref'];
         foreach ($cookies as $cookie) {
             $this->setCookie($cookie, '', -86400);
         }
@@ -1433,16 +1433,16 @@ class PiwikTracker
         $proxy = $this->getProxy();
 
         if (function_exists('curl_init') && function_exists('curl_exec')) {
-            $options = array(
+            $options = [
                 CURLOPT_URL => $url,
                 CURLOPT_USERAGENT => $this->userAgent,
                 CURLOPT_HEADER => true,
                 CURLOPT_TIMEOUT => $this->requestTimeout,
                 CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_HTTPHEADER => array(
+                CURLOPT_HTTPHEADER => [
                     'Accept-Language: ' . $this->acceptLanguage,
-                ),
-            );
+                ],
+            ];
 
             if (defined('PATH_TO_CERTIFICATES_FILE')) {
                 $options[CURLOPT_CAINFO] = PATH_TO_CERTIFICATES_FILE;
@@ -1469,7 +1469,7 @@ class PiwikTracker
 
             if (!empty($this->outgoingTrackerCookies)) {
                 $options[CURLOPT_COOKIE] = http_build_query($this->outgoingTrackerCookies);
-                $this->outgoingTrackerCookies = array();
+                $this->outgoingTrackerCookies = [];
             }
             
             $ch = curl_init();
@@ -1486,14 +1486,14 @@ class PiwikTracker
             $this->parseIncomingCookies(explode("\r\n", $header));
 
         } elseif (function_exists('stream_context_create')) {
-            $stream_options = array(
-                'http' => array(
+            $stream_options = [
+                'http' => [
                     'method' => $method,
                     'user_agent' => $this->userAgent,
                     'header' => "Accept-Language: " . $this->acceptLanguage . "\r\n",
                     'timeout' => $this->requestTimeout, // PHP 5.2.1
-                ),
-            );
+                ],
+            ];
 
             if (isset($proxy)) {
                 $stream_options['http']['proxy'] = $proxy;
@@ -1507,7 +1507,7 @@ class PiwikTracker
 
             if (!empty($this->outgoingTrackerCookies)) {
                 $stream_options['http']['header'] .= 'Cookie: ' . http_build_query($this->outgoingTrackerCookies) . "\r\n";
-                $this->outgoingTrackerCookies = array();
+                $this->outgoingTrackerCookies = [];
             }
             
             $ctx = stream_context_create($stream_options);
@@ -1639,8 +1639,8 @@ class PiwikTracker
 
 
         // Reset page level custom variables after this page view
-        $this->pageCustomVar = array();
-        $this->eventCustomVar = array();
+        $this->pageCustomVar = [];
+        $this->eventCustomVar = [];
         $this->clearCustomTrackingParameters();
 
         // force new visit only once, user must call again setForceNewVisit()
@@ -1789,7 +1789,7 @@ class PiwikTracker
      */
     protected function parseIncomingCookies(array $headers)
     {
-        $this->incomingTrackerCookies = array();
+        $this->incomingTrackerCookies = [];
         
         if (!empty($headers)) {
             $headerName = 'set-cookie:';
