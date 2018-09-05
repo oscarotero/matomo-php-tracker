@@ -122,7 +122,6 @@ class PiwikTracker
     {
         $this->request = $request;
         $this->idSite = $idSite;
-        $this->urlReferrer = !empty($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : false;
         $this->pageCharset = self::DEFAULT_CHARSET_PARAMETER_VALUES;
         $this->ip = !empty($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : false;
         $this->acceptLanguage = !empty($_SERVER['HTTP_ACCEPT_LANGUAGE']) ? $_SERVER['HTTP_ACCEPT_LANGUAGE'] : false;
@@ -166,15 +165,6 @@ class PiwikTracker
     public function setPageCharset(string $charset = ''): self
     {
         $this->pageCharset = $charset;
-        return $this;
-    }
-
-    /**
-     * Sets the URL referrer used to track Referrers details for new visits.
-     */
-    public function setUrlReferrer(string $url): self
-    {
-        $this->urlReferrer = $url;
         return $this;
     }
 
@@ -1616,7 +1606,7 @@ class PiwikTracker
 
             // URL parameters
             '&url=' . urlencode((string) $this->request->getUri()) .
-            '&urlref=' . urlencode((string) $this->urlReferrer) .
+            '&urlref=' . urlencode((string) $this->request->getHeaderLine('Referer')) .
             ((!empty($this->pageCharset) && $this->pageCharset != self::DEFAULT_CHARSET_PARAMETER_VALUES) ?
                 '&cs=' . $this->pageCharset : '') .
 
@@ -1719,24 +1709,6 @@ class PiwikTracker
     }
 
     /**
-     * If the current URL is 'http://example.org/dir1/dir2/index.php?param1=value1&param2=value2"
-     * will return 'http'
-     *
-     * @return string 'https' or 'http'
-     * @ignore
-     */
-    protected static function getCurrentScheme(): string
-    {
-        if (isset($_SERVER['HTTPS'])
-            && ($_SERVER['HTTPS'] == 'on' || $_SERVER['HTTPS'] === true)
-        ) {
-            return 'https';
-        }
-
-        return 'http';
-    }
-
-    /**
      * If current URL is "http://example.org/dir1/dir2/index.php?param1=value1&param2=value2"
      * will return "http://example.org"
      *
@@ -1749,24 +1721,6 @@ class PiwikTracker
         }
 
         return 'unknown';
-    }
-
-    /**
-     * If current URL is "http://example.org/dir1/dir2/index.php?param1=value1&param2=value2"
-     * will return "?param1=value1&param2=value2"
-     *
-     * @ignore
-     */
-    protected static function getCurrentQueryString(): string
-    {
-        $url = '';
-        if (isset($_SERVER['QUERY_STRING'])
-            && !empty($_SERVER['QUERY_STRING'])
-        ) {
-            $url .= '?' . $_SERVER['QUERY_STRING'];
-        }
-
-        return $url;
     }
 
     /**
