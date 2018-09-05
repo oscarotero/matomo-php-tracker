@@ -120,12 +120,14 @@ class PiwikTracker
      */
     public function __construct(ServerRequestInterface $request, string $apiUrl, int $idSite)
     {
+        $server = $request->getServerParams();
+
         $this->request = $request;
         $this->idSite = $idSite;
         $this->pageCharset = self::DEFAULT_CHARSET_PARAMETER_VALUES;
-        $this->ip = !empty($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : false;
-        $this->acceptLanguage = !empty($_SERVER['HTTP_ACCEPT_LANGUAGE']) ? $_SERVER['HTTP_ACCEPT_LANGUAGE'] : false;
-        $this->userAgent = !empty($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : false;
+        $this->ip = $server['REMOTE_ADDR'] ?? '';
+        $this->acceptLanguage = $server['HTTP_ACCEPT_LANGUAGE'] ?? '';
+        $this->userAgent = $request->getHeaderLine('User-Agent');
         $this->apiUrl = $apiUrl;
 
         $this->setNewVisitorId();
@@ -458,8 +460,6 @@ class PiwikTracker
 
     /**
      * Get cookie name with prefix and domain hash
-     * @param string $cookieName
-     * @return string
      */
     protected function getCookieName(string $cookieName): string
     {
@@ -1563,6 +1563,8 @@ class PiwikTracker
             $customFields = '&' . http_build_query($this->customParameters, '', '&');
         }
 
+        $getParams = $this->request->getQueryParams();
+
         $url = $this->getBaseUrl() .
             '?idsite=' . $idSite .
             '&rec=1' .
@@ -1570,9 +1572,9 @@ class PiwikTracker
             '&r=' . substr(strval(mt_rand()), 2, 6) .
 
             // XDEBUG_SESSIONS_START and KEY are related to the PHP Debugger, this can be ignored in other languages
-            (!empty($_GET['XDEBUG_SESSION_START']) ?
-                '&XDEBUG_SESSION_START=' . @urlencode($_GET['XDEBUG_SESSION_START']) : '') .
-            (!empty($_GET['KEY']) ? '&KEY=' . @urlencode($_GET['KEY']) : '') .
+            (!empty($getParams['XDEBUG_SESSION_START']) ?
+                '&XDEBUG_SESSION_START=' . @urlencode($getParams['XDEBUG_SESSION_START']) : '') .
+            (!empty($getParams['KEY']) ? '&KEY=' . @urlencode($getParams['KEY']) : '') .
 
             // Only allowed for Admin/Super User, token_auth required,
             (!empty($this->ip) ? '&cip=' . $this->ip : '') .
@@ -1659,7 +1661,8 @@ class PiwikTracker
         if ($this->configCookiesDisabled) {
             return false;
         }
-        if (!is_array($_COOKIE)) {
+        $cookies = $this->request->getCookieParams();
+        if (empty($cookies)) {
             return false;
         }
         $name = $this->getCookieName($name);
@@ -1667,7 +1670,7 @@ class PiwikTracker
         // Piwik cookie names use dots separators in piwik.js,
         // but PHP Replaces . with _ http://www.php.net/manual/en/language.variables.predefined.php#72571
         $name = str_replace('.', '_', $name);
-        foreach ($_COOKIE as $cookieName => $cookieValue) {
+        foreach ($cookies as $cookieName => $cookieValue) {
             if (strpos($cookieName, $name) !== false) {
                 return $cookieValue;
             }
