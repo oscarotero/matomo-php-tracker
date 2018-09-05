@@ -2,6 +2,7 @@
 declare(strict_types = 1);
 
 use Psr\Http\Message\ServerRequestInterface;
+use InvalidArgumentException;
 
 /**
  * Piwik - free/libre analytics platform
@@ -203,65 +204,68 @@ class PiwikTracker
      * @param string $name Custom variable name
      * @param string $value Custom variable value
      * @param string $scope Custom variable scope. Possible values: visit, page, event
+     * 
      * @throws Exception
      */
     public function setCustomVariable(int $id, string $name, string $value, string $scope = 'visit'): self
     {
-        if (!is_int($id)) {
-            throw new Exception("Parameter id to setCustomVariable should be an integer");
+        switch ($scope) {
+            case 'page':
+                $this->pageCustomVar[$id] = [$name, $value];
+                return $this;
+
+            case 'event':
+                $this->eventCustomVar[$id] = [$name, $value];
+                return $this;
+
+            case 'visit':
+                $this->visitorCustomVar[$id] = [$name, $value];
+                return $this;
         }
-        if ($scope == 'page') {
-            $this->pageCustomVar[$id] = [$name, $value];
-        } elseif ($scope == 'event') {
-            $this->eventCustomVar[$id] = [$name, $value];
-        } elseif ($scope == 'visit') {
-            $this->visitorCustomVar[$id] = [$name, $value];
-        } else {
-            throw new Exception("Invalid 'scope' parameter value");
-        }
-        return $this;
+
+        throw new InvalidArgumentException("Invalid 'scope' parameter value: {$scope}");
     }
 
     /**
      * Returns the currently assigned Custom Variable.
      *
      * If scope is 'visit', it will attempt to read the value set in the first party cookie created by Piwik Tracker
-     *  ($_COOKIE array).
      *
      * @param int $id Custom Variable integer index to fetch from cookie. Should be a value from 1 to 5
      * @param string $scope Custom variable scope. Possible values: visit, page, event
      *
-     * @throws Exception
+     * @throws InvalidArgumentException
      * @return mixed An array with this format: array( 0 => CustomVariableName, 1 => CustomVariableValue ) or false
      * @see Piwik.js getCustomVariable()
      */
     public function getCustomVariable(int $id, string $scope = 'visit')
     {
-        if ($scope == 'page') {
-            return isset($this->pageCustomVar[$id]) ? $this->pageCustomVar[$id] : false;
-        } elseif ($scope == 'event') {
-            return isset($this->eventCustomVar[$id]) ? $this->eventCustomVar[$id] : false;
-        } else {
-            if ($scope != 'visit') {
-                throw new Exception("Invalid 'scope' parameter value");
-            }
-        }
-        if (!empty($this->visitorCustomVar[$id])) {
-            return $this->visitorCustomVar[$id];
-        }
-        $cookieDecoded = $this->getCustomVariablesFromCookie();
-        if (!is_int($id)) {
-            throw new Exception("Parameter to getCustomVariable should be an integer");
-        }
-        if (!is_array($cookieDecoded)
-            || !isset($cookieDecoded[$id])
-            || !is_array($cookieDecoded[$id])
-            || count($cookieDecoded[$id]) != 2
-        ) {
-            return false;
+        switch ($scope) {
+            case 'page':
+                return $this->pageCustomVar[$id] ?? false;
+
+            case 'event':
+                return $this->eventCustomVar[$id] ?? false;
+
+            case 'visit':
+                if (!empty($this->visitorCustomVar[$id])) {
+                    return $this->visitorCustomVar[$id];
+                }
+
+                $cookieDecoded = $this->getCustomVariablesFromCookie();
+
+                if (!is_array($cookieDecoded)
+                    || !isset($cookieDecoded[$id])
+                    || !is_array($cookieDecoded[$id])
+                    || count($cookieDecoded[$id]) !== 2
+                ) {
+                    return false;
+                }
+
+                return $cookieDecoded[$id];
         }
 
-        return $cookieDecoded[$id];
+        throw new InvalidArgumentException("Invalid 'scope' parameter value: {$scope}");
     }
 
     /**
@@ -284,7 +288,6 @@ class PiwikTracker
      *
      * @param string $trackingApiParameter The name of the tracking API parameter, eg 'dimension1'
      * @param string $value Tracking parameter value that shall be sent for this tracking parameter.
-     * @throws Exception
      */
     public function setCustomTrackingParameter(string $trackingApiParameter, string $value): self
     {
@@ -309,15 +312,6 @@ class PiwikTracker
         $this->userId = false;
         $this->forcedVisitorId = false;
         $this->cookieVisitorId = false;
-        return $this;
-    }
-
-    /**
-     * Sets the current site ID.
-     */
-    public function setIdSite(id $idSite): self
-    {
-        $this->idSite = $idSite;
         return $this;
     }
 
@@ -384,7 +378,6 @@ class PiwikTracker
     /**
      * Enables the bulk request feature. When used, each tracking action is stored until the
      * doBulkTrack method is called. This method will send all tracking data at once.
-     *
      */
     public function enableBulkTracking()
     {
@@ -395,13 +388,13 @@ class PiwikTracker
      * Enable Cookie Creation - this will cause a first party VisitorId cookie to be set when the VisitorId is set or reset
      *
      * @param string $domain (optional) Set first-party cookie domain.
-     *  Accepted values: example.com, *.example.com (same as .example.com) or subdomain.example.com
+     *  Accepted values: example.com, .example.com or subdomain.example.com
      * @param string $path (optional) Set first-party cookie path
      */
     public function enableCookies(string $domain = '', string $path = '/')
     {
         $this->configCookiesDisabled = false;
-        $this->configCookieDomain = self::domainFixup($domain);
+        $this->configCookieDomain = $domain;
         $this->configCookiePath = $path;
     }
 
@@ -414,40 +407,13 @@ class PiwikTracker
     }
 
     /**
-     * Fix-up domain
-     */
-    protected static function domainFixup(string $domain)
-    {
-        if (strlen($domain) > 0) {
-            $dl = strlen($domain) - 1;
-            // remove trailing '.'
-            if ($domain{$dl} === '.') {
-                $domain = substr($domain, 0, $dl);
-            }
-            // remove leading '*'
-            if (substr($domain, 0, 2) === '*.') {
-                $domain = substr($domain, 1);
-            }
-        }
-
-        return $domain;
-    }
-
-    /**
      * Get cookie name with prefix and domain hash
      */
     protected function getCookieName(string $cookieName): string
     {
         // NOTE: If the cookie name is changed, we must also update the method in piwik.js with the same name.
         $host = $this->request->getUri()->getHost() ?: 'unknown';
-
-        $hash = substr(
-            sha1(
-                ($this->configCookieDomain == '' ? $host : $this->configCookieDomain) . $this->configCookiePath
-            ),
-            0,
-            4
-        );
+        $hash = substr(sha1(($this->configCookieDomain === '' ? $host : $this->configCookieDomain) . $this->configCookiePath), 0, 4);
 
         return self::FIRST_PARTY_COOKIES_PREFIX . $cookieName . '.' . $this->idSite . '.' . $hash;
     }
@@ -584,12 +550,12 @@ class PiwikTracker
      * @param string|array $category (optional) Product category, or array of product categories (up to 5 categories can be specified for a given product)
      * @param float|int $price (optional) Individual product price (supports integer and decimal prices)
      * @param int $quantity (optional) Product quantity. If not specified, will default to 1 in the Reports
-     * @throws Exception
+     * @throws InvalidArgumentException
      */
-    public function addEcommerceItem(string $sku, string $name = '', $category = '', $price = 0.0, int $quantity = 1)
+    public function addEcommerceItem(string $sku, string $name = '', $category = '', float $price = 0.0, int $quantity = 1)
     {
         if (empty($sku)) {
-            throw new Exception("You must specify a SKU for the Ecommerce item");
+            throw new InvalidArgumentException("You must specify a SKU for the Ecommerce item");
         }
 
         $price = $this->forceDotAsSeparatorForDecimalPoint($price);
@@ -765,11 +731,9 @@ class PiwikTracker
      * so items will have to be added again via addEcommerceItem()
      * @ignore
      */
-    public function getUrlTrackEcommerceCartUpdate($grandTotal)
+    public function getUrlTrackEcommerceCartUpdate($grandTotal): string
     {
-        $url = $this->getUrlTrackEcommerce($grandTotal);
-
-        return $url;
+        return $this->getUrlTrackEcommerce($grandTotal);
     }
 
     /**
@@ -785,7 +749,7 @@ class PiwikTracker
         $tax = 0.0,
         $shipping = 0.0,
         $discount = 0.0
-    )
+    ): string
     {
         if (empty($orderId)) {
             throw new Exception("You must specifiy an orderId for the Ecommerce order");
@@ -805,7 +769,7 @@ class PiwikTracker
      *
      * @ignore
      */
-    protected function getUrlTrackEcommerce($grandTotal, $subTotal = 0.0, $tax = 0.0, $shipping = 0.0, $discount = 0.0)
+    protected function getUrlTrackEcommerce($grandTotal, $subTotal = 0.0, $tax = 0.0, $shipping = 0.0, $discount = 0.0): string
     {
         if (!is_numeric($grandTotal)) {
             throw new Exception("You must specifiy a grandTotal for the Ecommerce order (or Cart update)");
