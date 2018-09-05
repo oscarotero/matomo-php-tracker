@@ -51,6 +51,9 @@ class PiwikTracker
     public $localMinute = false;
     public $localSecond = false;
     public $idPageview = false;
+    public $sendImageResponse = true;
+    public $outgoingTrackerCookies = [];
+    public $incomingTrackerCookies = [];
 
     // Life of the visitor cookie (in sec)
     public $configVisitorCookieTimeout = 33955200; // 13 months (365 + 28 days)
@@ -64,6 +67,19 @@ class PiwikTracker
     public $forcedVisitorId = false;
     public $cookieVisitorId = false;
     public $randomVisitorId = false;
+    public $visitCount = 0;
+    public $currentVisitTs = false;
+    public $lastVisitTs = false;
+    public $ecommerceLastOrderTimestamp = false;
+
+    // Allow debug while blocking the request
+    public $requestTimeout = 600;
+    public $doBulkRequests = false;
+    public $storedTrackingActions = [];
+
+    public $configCookiesDisabled = false;
+    public $configCookiePath = self::DEFAULT_COOKIE_PATH;
+    public $configCookieDomain = '';
 
     /**
      * API Version
@@ -129,28 +145,9 @@ class PiwikTracker
 
         $this->setNewVisitorId();
 
-        $this->configCookiesDisabled = false;
-        $this->configCookiePath = self::DEFAULT_COOKIE_PATH;
-        $this->configCookieDomain = '';
-
         $this->currentTs = time();
         $this->createTs = $this->currentTs;
-        $this->visitCount = 0;
-        $this->currentVisitTs = false;
-        $this->lastVisitTs = false;
-        $this->ecommerceLastOrderTimestamp = false;
-
-        // Allow debug while blocking the request
-        $this->requestTimeout = 600;
-        $this->doBulkRequests = false;
-        $this->storedTrackingActions = [];
-
-        $this->sendImageResponse = true;
-
         $this->visitorCustomVar = $this->getCustomVariablesFromCookie();
-        
-        $this->outgoingTrackerCookies = [];
-        $this->incomingTrackerCookies = [];
     }
 
     /**
