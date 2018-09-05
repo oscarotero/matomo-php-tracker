@@ -1,6 +1,8 @@
 <?php
 declare(strict_types = 1);
 
+use Psr\Http\Message\ServerRequestInterface;
+
 /**
  * Piwik - free/libre analytics platform
  *
@@ -23,6 +25,8 @@ declare(strict_types = 1);
  */
 class PiwikTracker
 {
+    private $request;
+
     public $apiUrl = '';
     public $ecommerceItems = [];
     public $attributionInfo = false;
@@ -114,12 +118,12 @@ class PiwikTracker
      * Builds a PiwikTracker object, used to track visits, pages and Goal conversions
      * for a specific website, by using the Piwik Tracking API.
      */
-    public function __construct(string $apiUrl, int $idSite)
+    public function __construct(ServerRequestInterface $request, string $apiUrl, int $idSite)
     {
+        $this->request = $request;
         $this->idSite = $idSite;
         $this->urlReferrer = !empty($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : false;
         $this->pageCharset = self::DEFAULT_CHARSET_PARAMETER_VALUES;
-        $this->pageUrl = self::getCurrentUrl();
         $this->ip = !empty($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : false;
         $this->acceptLanguage = !empty($_SERVER['HTTP_ACCEPT_LANGUAGE']) ? $_SERVER['HTTP_ACCEPT_LANGUAGE'] : false;
         $this->userAgent = !empty($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : false;
@@ -162,15 +166,6 @@ class PiwikTracker
     public function setPageCharset(string $charset = ''): self
     {
         $this->pageCharset = $charset;
-        return $this;
-    }
-
-    /**
-     * Sets the current URL being tracked
-     */
-    public function setUrl(string $url): self
-    {
-        $this->pageUrl = $url;
         return $this;
     }
 
@@ -1620,7 +1615,7 @@ class PiwikTracker
             (!empty($this->forcedVisitorId) ? '&cid=' . $this->forcedVisitorId : '&_id=' . $this->getVisitorId()) .
 
             // URL parameters
-            '&url=' . urlencode($this->pageUrl) .
+            '&url=' . urlencode((string) $this->request->getUri()) .
             '&urlref=' . urlencode((string) $this->urlReferrer) .
             ((!empty($this->pageCharset) && $this->pageCharset != self::DEFAULT_CHARSET_PARAMETER_VALUES) ?
                 '&cs=' . $this->pageCharset : '') .
@@ -1772,19 +1767,6 @@ class PiwikTracker
         }
 
         return $url;
-    }
-
-    /**
-     * Returns the current full URL (scheme, host, path and query string.
-     *
-     * @ignore
-     */
-    protected static function getCurrentUrl(): string
-    {
-        return self::getCurrentScheme() . '://'
-        . self::getCurrentHost()
-        . self::getCurrentScriptName()
-        . self::getCurrentQueryString();
     }
 
     /**

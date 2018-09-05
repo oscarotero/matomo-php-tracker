@@ -18,5 +18,12 @@
     },
     "autoload": {
         "classmap": ["."]
+    },
+    "require-dev": {
+        "middlewares/utils": "^2.1",
+        "nyholm/psr7": "^1.0"
+    },
+    "require": {
+        "psr/http-message": "^1.0"
     }
 }
