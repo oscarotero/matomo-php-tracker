@@ -26,11 +26,11 @@ use Psr\Http\Message\ServerRequestInterface;
 class PiwikTracker
 {
     private $request;
+    private $apiUrl;
 
-    public $apiUrl = '';
     public $ecommerceItems = [];
-    public $attributionInfo = false;
-    public $eventCustomVar = false;
+    public $attributionInfo;
+    public $eventCustomVar = [];
     public $forcedDatetime = false;
     public $forcedNewVisit = false;
     public $generationTime = false;
@@ -127,8 +127,6 @@ class PiwikTracker
         $this->acceptLanguage = !empty($_SERVER['HTTP_ACCEPT_LANGUAGE']) ? $_SERVER['HTTP_ACCEPT_LANGUAGE'] : false;
         $this->userAgent = !empty($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : false;
         $this->apiUrl = $apiUrl;
-
-        
 
         $this->setNewVisitorId();
 
@@ -466,9 +464,11 @@ class PiwikTracker
     protected function getCookieName(string $cookieName): string
     {
         // NOTE: If the cookie name is changed, we must also update the method in piwik.js with the same name.
+        $host = $this->request->getUri()->getHost() ?: 'unknown';
+
         $hash = substr(
             sha1(
-                ($this->configCookieDomain == '' ? self::getCurrentHost() : $this->configCookieDomain) . $this->configCookiePath
+                ($this->configCookieDomain == '' ? $host : $this->configCookieDomain) . $this->configCookiePath
             ),
             0,
             4
@@ -1674,53 +1674,6 @@ class PiwikTracker
         }
 
         return false;
-    }
-
-    /**
-     * If current URL is "http://example.org/dir1/dir2/index.php?param1=value1&param2=value2"
-     * will return "/dir1/dir2/index.php"
-     *
-     * @return string
-     * @ignore
-     */
-    protected static function getCurrentScriptName(): string
-    {
-        $url = '';
-        if (!empty($_SERVER['PATH_INFO'])) {
-            $url = $_SERVER['PATH_INFO'];
-        } else {
-            if (!empty($_SERVER['REQUEST_URI'])) {
-                if (($pos = strpos($_SERVER['REQUEST_URI'], '?')) !== false) {
-                    $url = substr($_SERVER['REQUEST_URI'], 0, $pos);
-                } else {
-                    $url = $_SERVER['REQUEST_URI'];
-                }
-            }
-        }
-        if (empty($url)) {
-            $url = $_SERVER['SCRIPT_NAME'];
-        }
-
-        if ($url[0] !== '/') {
-            $url = '/' . $url;
-        }
-
-        return $url;
-    }
-
-    /**
-     * If current URL is "http://example.org/dir1/dir2/index.php?param1=value1&param2=value2"
-     * will return "http://example.org"
-     *
-     * @ignore
-     */
-    protected static function getCurrentHost(): string
-    {
-        if (isset($_SERVER['HTTP_HOST'])) {
-            return $_SERVER['HTTP_HOST'];
-        }
-
-        return 'unknown';
     }
 
     /**
