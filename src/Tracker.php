@@ -3,8 +3,8 @@ declare(strict_types = 1);
 
 namespace MatomoTracker;
 
-use Psr\Http\Message\ServerRequestInterface;
 use InvalidArgumentException;
+use Psr\Http\Message\ServerRequestInterface;
 
 /**
  * Piwik - free/libre analytics platform
@@ -15,7 +15,6 @@ use InvalidArgumentException;
  * @link http://piwik.org/docs/tracking-api/
  *
  * @category Piwik
- * @package PiwikTracker
  */
 
 /**
@@ -23,7 +22,6 @@ use InvalidArgumentException;
  *
  * For more information, see README.md
  *
- * @package PiwikTracker
  * @api
  */
 class Tracker
@@ -184,7 +182,7 @@ class Tracker
      * If you call enableCookies() then these referral attribution values will be set
      * to the 'ref' first party cookie storing referral information.
      *
-     * @param string $jsonEncoded JSON encoded array containing Attribution info
+     * @param  string    $jsonEncoded JSON encoded array containing Attribution info
      * @throws Exception
      * @see function getAttributionInfo() in https://github.com/piwik/piwik/blob/master/js/piwik.js
      */
@@ -202,11 +200,11 @@ class Tracker
      * Sets Visit Custom Variable.
      * See http://piwik.org/docs/custom-variables/
      *
-     * @param int $id Custom variable slot ID from 1-5
-     * @param string $name Custom variable name
+     * @param int    $id    Custom variable slot ID from 1-5
+     * @param string $name  Custom variable name
      * @param string $value Custom variable value
      * @param string $scope Custom variable scope. Possible values: visit, page, event
-     * 
+     *
      * @throws Exception
      */
     public function setCustomVariable(int $id, string $name, string $value, string $scope = 'visit'): self
@@ -215,11 +213,9 @@ class Tracker
             case 'page':
                 $this->pageCustomVar[$id] = [$name, $value];
                 return $this;
-
             case 'event':
                 $this->eventCustomVar[$id] = [$name, $value];
                 return $this;
-
             case 'visit':
                 $this->visitorCustomVar[$id] = [$name, $value];
                 return $this;
@@ -233,11 +229,11 @@ class Tracker
      *
      * If scope is 'visit', it will attempt to read the value set in the first party cookie created by Piwik Tracker
      *
-     * @param int $id Custom Variable integer index to fetch from cookie. Should be a value from 1 to 5
+     * @param int    $id    Custom Variable integer index to fetch from cookie. Should be a value from 1 to 5
      * @param string $scope Custom variable scope. Possible values: visit, page, event
      *
      * @throws InvalidArgumentException
-     * @return mixed An array with this format: array( 0 => CustomVariableName, 1 => CustomVariableValue ) or false
+     * @return mixed                    An array with this format: array( 0 => CustomVariableName, 1 => CustomVariableValue ) or false
      * @see Piwik.js getCustomVariable()
      */
     public function getCustomVariable(int $id, string $scope = 'visit')
@@ -245,10 +241,8 @@ class Tracker
         switch ($scope) {
             case 'page':
                 return $this->pageCustomVar[$id] ?? false;
-
             case 'event':
                 return $this->eventCustomVar[$id] ?? false;
-
             case 'visit':
                 if (!empty($this->visitorCustomVar[$id])) {
                     return $this->visitorCustomVar[$id];
@@ -289,7 +283,7 @@ class Tracker
      * tracking request.
      *
      * @param string $trackingApiParameter The name of the tracking API parameter, eg 'dimension1'
-     * @param string $value Tracking parameter value that shall be sent for this tracking parameter.
+     * @param string $value                Tracking parameter value that shall be sent for this tracking parameter.
      */
     public function setCustomTrackingParameter(string $trackingApiParameter, string $value): self
     {
@@ -390,8 +384,8 @@ class Tracker
      * Enable Cookie Creation - this will cause a first party VisitorId cookie to be set when the VisitorId is set or reset
      *
      * @param string $domain (optional) Set first-party cookie domain.
-     *  Accepted values: example.com, .example.com or subdomain.example.com
-     * @param string $path (optional) Set first-party cookie path
+     *                       Accepted values: example.com, .example.com or subdomain.example.com
+     * @param string $path   (optional) Set first-party cookie path
      */
     public function enableCookies(string $domain = '', string $path = '/')
     {
@@ -423,8 +417,8 @@ class Tracker
     /**
      * Tracks a page view
      *
-     * @param string $documentTitle Page title as it will appear in the Actions > Page titles report
-     * @return mixed Response string or true if using bulk requests.
+     * @param  string $documentTitle Page title as it will appear in the Actions > Page titles report
+     * @return mixed  Response string or true if using bulk requests.
      */
     public function doTrackPageView(string $documentTitle)
     {
@@ -443,11 +437,11 @@ class Tracker
     /**
      * Tracks an event
      *
-     * @param string $category The Event Category (Videos, Music, Games...)
-     * @param string $action The Event's Action (Play, Pause, Duration, Add Playlist, Downloaded, Clicked...)
-     * @param string|bool $name (optional) The Event's object Name (a particular Movie name, or Song name, or File name...)
-     * @param float|bool $value (optional) The Event's value
-     * @return mixed Response string or true if using bulk requests.
+     * @param  string      $category The Event Category (Videos, Music, Games...)
+     * @param  string      $action   The Event's Action (Play, Pause, Duration, Add Playlist, Downloaded, Clicked...)
+     * @param  string|bool $name     (optional) The Event's object Name (a particular Movie name, or Song name, or File name...)
+     * @param  float|bool  $value    (optional) The Event's value
+     * @return mixed       Response string or true if using bulk requests.
      */
     public function doTrackEvent(string $category, string $action, $name = false, $value = false)
     {
@@ -459,10 +453,10 @@ class Tracker
     /**
      * Tracks a content impression
      *
-     * @param string $contentName The name of the content. For instance 'Ad Foo Bar'
-     * @param string $contentPiece The actual content. For instance the path to an image, video, audio, any text
-     * @param string|bool $contentTarget (optional) The target of the content. For instance the URL of a landing page.
-     * @return mixed Response string or true if using bulk requests.
+     * @param  string      $contentName   The name of the content. For instance 'Ad Foo Bar'
+     * @param  string      $contentPiece  The actual content. For instance the path to an image, video, audio, any text
+     * @param  string|bool $contentTarget (optional) The target of the content. For instance the URL of a landing page.
+     * @return mixed       Response string or true if using bulk requests.
      */
     public function doTrackContentImpression(string $contentName, string $contentPiece = 'Unknown', $contentTarget = false)
     {
@@ -475,19 +469,18 @@ class Tracker
      * Tracks a content interaction. Make sure you have tracked a content impression using the same content name and
      * content piece, otherwise it will not count. To do so you should call the method doTrackContentImpression();
      *
-     * @param string $interaction The name of the interaction with the content. For instance a 'click'
-     * @param string $contentName The name of the content. For instance 'Ad Foo Bar'
-     * @param string $contentPiece The actual content. For instance the path to an image, video, audio, any text
-     * @param string|bool $contentTarget (optional) The target the content leading to when an interaction occurs. For instance the URL of a landing page.
-     * @return mixed Response string or true if using bulk requests.
+     * @param  string      $interaction   The name of the interaction with the content. For instance a 'click'
+     * @param  string      $contentName   The name of the content. For instance 'Ad Foo Bar'
+     * @param  string      $contentPiece  The actual content. For instance the path to an image, video, audio, any text
+     * @param  string|bool $contentTarget (optional) The target the content leading to when an interaction occurs. For instance the URL of a landing page.
+     * @return mixed       Response string or true if using bulk requests.
      */
     public function doTrackContentInteraction(
         string $interaction,
         string $contentName,
         string $contentPiece = 'Unknown',
         $contentTarget = false
-    )
-    {
+    ) {
         $url = $this->getUrlTrackContentInteraction($interaction, $contentName, $contentPiece, $contentTarget);
 
         return $this->sendRequest($url);
@@ -497,8 +490,8 @@ class Tracker
      * Tracks an internal Site Search query, and optionally tracks the Search Category, and Search results Count.
      * These are used to populate reports in Actions > Site Search.
      *
-     * @param string $keyword Searched query on the site
-     * @param string $category (optional) Search engine category if applicable
+     * @param string   $keyword      Searched query on the site
+     * @param string   $category     (optional) Search engine category if applicable
      * @param bool|int $countResults (optional) results displayed on the search result page. Used to track "zero result" keywords.
      *
      * @return mixed Response or true if using bulk requests.
@@ -513,8 +506,8 @@ class Tracker
     /**
      * Records a Goal conversion
      *
-     * @param int $idGoal Id Goal to record a conversion
-     * @param float $revenue Revenue for this conversion
+     * @param  int   $idGoal  Id Goal to record a conversion
+     * @param  float $revenue Revenue for this conversion
      * @return mixed Response or true if using bulk request
      */
     public function doTrackGoal(int $idGoal, float $revenue = 0.0)
@@ -527,9 +520,9 @@ class Tracker
     /**
      * Tracks a download or outlink
      *
-     * @param string $actionUrl URL of the download or outlink
-     * @param string $actionType Type of the action: 'download' or 'link'
-     * @return mixed Response or true if using bulk request
+     * @param  string $actionUrl  URL of the download or outlink
+     * @param  string $actionType Type of the action: 'download' or 'link'
+     * @return mixed  Response or true if using bulk request
      */
     public function doTrackAction(string $actionUrl, string $actionType)
     {
@@ -547,17 +540,17 @@ class Tracker
      * SKU parameter is mandatory. Other parameters are optional (set to false if value not known).
      * Ecommerce items added via this function are automatically cleared when doTrackEcommerceOrder() or getUrlTrackEcommerceOrder() is called.
      *
-     * @param string $sku (required) SKU, Product identifier
-     * @param string $name (optional) Product name
-     * @param string|array $category (optional) Product category, or array of product categories (up to 5 categories can be specified for a given product)
-     * @param float|int $price (optional) Individual product price (supports integer and decimal prices)
-     * @param int $quantity (optional) Product quantity. If not specified, will default to 1 in the Reports
+     * @param  string                   $sku      (required) SKU, Product identifier
+     * @param  string                   $name     (optional) Product name
+     * @param  string|array             $category (optional) Product category, or array of product categories (up to 5 categories can be specified for a given product)
+     * @param  float|int                $price    (optional) Individual product price (supports integer and decimal prices)
+     * @param  int                      $quantity (optional) Product quantity. If not specified, will default to 1 in the Reports
      * @throws InvalidArgumentException
      */
     public function addEcommerceItem(string $sku, string $name = '', $category = '', float $price = 0.0, int $quantity = 1)
     {
         if (empty($sku)) {
-            throw new InvalidArgumentException("You must specify a SKU for the Ecommerce item");
+            throw new InvalidArgumentException('You must specify a SKU for the Ecommerce item');
         }
 
         $price = $this->forceDotAsSeparatorForDecimalPoint($price);
@@ -572,7 +565,7 @@ class Tracker
      * including the items that haven't been updated since the last cart update.
      * Items which were in the previous cart and are not sent in later Cart updates will be deleted from the cart (in the database).
      *
-     * @param float $grandTotal Cart grandTotal (typically the sum of all items' prices)
+     * @param  float $grandTotal Cart grandTotal (typically the sum of all items' prices)
      * @return mixed Response or true if using bulk request
      */
     public function doTrackEcommerceCartUpdate(float $grandTotal)
@@ -588,14 +581,14 @@ class Tracker
      * To enable bulk tracking, call enableBulkTracking().
      *
      * @throws Exception
-     * @return string Response
+     * @return string    Response
      */
     public function doBulkTrack(): string
     {
         if (empty($this->storedTrackingActions)) {
             throw new Exception(
-                "Error:  you must call the function doTrackPageView or doTrackGoal from this class,
-                 before calling this method doBulkTrack()"
+                'Error:  you must call the function doTrackPageView or doTrackGoal from this class,
+                 before calling this method doBulkTrack()'
             );
         }
 
@@ -621,15 +614,15 @@ class Tracker
      * All revenues (grandTotal, subTotal, tax, shipping, discount) will be individually summed and reported in Piwik reports.
      * Only the parameters $orderId and $grandTotal are required.
      *
-     * @param string|int $orderId (required) Unique Order ID.
-     *                This will be used to count this order only once in the event the order page is reloaded several times.
-     *                orderId must be unique for each transaction, even on different days, or the transaction will not be recorded by Piwik.
-     * @param float $grandTotal (required) Grand Total revenue of the transaction (including tax, shipping, etc.)
-     * @param float $subTotal (optional) Sub total amount, typically the sum of items prices for all items in this order (before Tax and Shipping costs are applied)
-     * @param float $tax (optional) Tax amount for this order
-     * @param float $shipping (optional) Shipping amount for this order
-     * @param float $discount (optional) Discounted amount in this order
-     * @return mixed Response or true if using bulk request
+     * @param  string|int $orderId    (required) Unique Order ID.
+     *                                This will be used to count this order only once in the event the order page is reloaded several times.
+     *                                orderId must be unique for each transaction, even on different days, or the transaction will not be recorded by Piwik.
+     * @param  float      $grandTotal (required) Grand Total revenue of the transaction (including tax, shipping, etc.)
+     * @param  float      $subTotal   (optional) Sub total amount, typically the sum of items prices for all items in this order (before Tax and Shipping costs are applied)
+     * @param  float      $tax        (optional) Tax amount for this order
+     * @param  float      $shipping   (optional) Shipping amount for this order
+     * @param  float      $discount   (optional) Discounted amount in this order
+     * @return mixed      Response or true if using bulk request
      */
     public function doTrackEcommerceOrder(
         float $orderId,
@@ -638,8 +631,7 @@ class Tracker
         float $tax = 0.0,
         float $shipping = 0.0,
         float $discount = 0.0
-    )
-    {
+    ) {
         $url = $this->getUrlTrackEcommerceOrder($orderId, $grandTotal, $subTotal, $tax, $shipping, $discount);
 
         return $this->sendRequest($url);
@@ -674,11 +666,11 @@ class Tracker
      * Tracking Product/Category page views will allow Piwik to report on Product & Categories
      * conversion rates (Conversion rate = Ecommerce orders containing this product or category / Visits to the product or category)
      *
-     * @param string $sku Product SKU being viewed
-     * @param string $name Product Name being viewed
+     * @param string       $sku      Product SKU being viewed
+     * @param string       $name     Product Name being viewed
      * @param string|array $category Category being viewed. On a Product page, this is the product's category.
-     *                                You can also specify an array of up to 5 categories for a given page view.
-     * @param float $price Specify the price at which the item was displayed
+     *                               You can also specify an array of up to 5 categories for a given page view.
+     * @param float        $price    Specify the price at which the item was displayed
      */
     public function setEcommerceView(string $sku = '', string $name = '', $category = '', float $price = 0.0): self
     {
@@ -687,12 +679,12 @@ class Tracker
                 $category = json_encode($category);
             }
         } else {
-            $category = "";
+            $category = '';
         }
         $this->pageCustomVar[self::CVAR_INDEX_ECOMMERCE_ITEM_CATEGORY] = ['_pkc', $category];
 
         if (!empty($price)) {
-            $price = (float)$price;
+            $price = (float) $price;
             $price = $this->forceDotAsSeparatorForDecimalPoint($price);
             $this->pageCustomVar[self::CVAR_INDEX_ECOMMERCE_ITEM_PRICE] = ['_pkp', $price];
         }
@@ -705,7 +697,7 @@ class Tracker
             $this->pageCustomVar[self::CVAR_INDEX_ECOMMERCE_ITEM_SKU] = ['_pks', $sku];
         }
         if (empty($name)) {
-            $name = "";
+            $name = '';
         }
         $this->pageCustomVar[self::CVAR_INDEX_ECOMMERCE_ITEM_NAME] = ['_pkn', $name];
         return $this;
@@ -732,6 +724,7 @@ class Tracker
      * Calling this function will reinitializes the property ecommerceItems to empty array
      * so items will have to be added again via addEcommerceItem()
      * @ignore
+     * @param mixed $grandTotal
      */
     public function getUrlTrackEcommerceCartUpdate($grandTotal): string
     {
@@ -743,6 +736,12 @@ class Tracker
      * Calling this function will reinitializes the property ecommerceItems to empty array
      * so items will have to be added again via addEcommerceItem()
      * @ignore
+     * @param mixed $orderId
+     * @param mixed $grandTotal
+     * @param mixed $subTotal
+     * @param mixed $tax
+     * @param mixed $shipping
+     * @param mixed $discount
      */
     public function getUrlTrackEcommerceOrder(
         $orderId,
@@ -751,10 +750,9 @@ class Tracker
         $tax = 0.0,
         $shipping = 0.0,
         $discount = 0.0
-    ): string
-    {
+    ): string {
         if (empty($orderId)) {
-            throw new Exception("You must specifiy an orderId for the Ecommerce order");
+            throw new Exception('You must specifiy an orderId for the Ecommerce order');
         }
         $url = $this->getUrlTrackEcommerce($grandTotal, $subTotal, $tax, $shipping, $discount);
         $url .= '&ec_id=' . urlencode($orderId);
@@ -770,11 +768,16 @@ class Tracker
      * so items will have to be added again via addEcommerceItem()
      *
      * @ignore
+     * @param mixed $grandTotal
+     * @param mixed $subTotal
+     * @param mixed $tax
+     * @param mixed $shipping
+     * @param mixed $discount
      */
     protected function getUrlTrackEcommerce($grandTotal, $subTotal = 0.0, $tax = 0.0, $shipping = 0.0, $discount = 0.0): string
     {
         if (!is_numeric($grandTotal)) {
-            throw new Exception("You must specifiy a grandTotal for the Ecommerce order (or Cart update)");
+            throw new Exception('You must specifiy a grandTotal for the Ecommerce order (or Cart update)');
         }
 
         $url = $this->getRequest($this->idSite);
@@ -811,7 +814,7 @@ class Tracker
      * Builds URL to track a page view.
      *
      * @see doTrackPageView()
-     * @param string $documentTitle Page view name as it will appear in Piwik reports
+     * @param  string $documentTitle Page view name as it will appear in Piwik reports
      * @return string URL to piwik.php with all parameters set to track the pageview
      */
     public function getUrlTrackPageView(string $documentTitle = ''): string
@@ -828,21 +831,21 @@ class Tracker
      * Builds URL to track a custom event.
      *
      * @see doTrackEvent()
-     * @param string $category The Event Category (Videos, Music, Games...)
-     * @param string $action The Event's Action (Play, Pause, Duration, Add Playlist, Downloaded, Clicked...)
-     * @param string|bool $name (optional) The Event's object Name (a particular Movie name, or Song name, or File name...)
-     * @param float|bool $value (optional) The Event's value
-     * @return string URL to piwik.php with all parameters set to track the pageview
+     * @param string      $category The Event Category (Videos, Music, Games...)
+     * @param string      $action   The Event's Action (Play, Pause, Duration, Add Playlist, Downloaded, Clicked...)
+     * @param string|bool $name     (optional) The Event's object Name (a particular Movie name, or Song name, or File name...)
+     * @param float|bool  $value    (optional) The Event's value
      * @throws
+     * @return string URL to piwik.php with all parameters set to track the pageview
      */
     public function getUrlTrackEvent(string $category, string $action, $name = false, $value = false): string
     {
         $url = $this->getRequest($this->idSite);
         if (strlen($category) == 0) {
-            throw new Exception("You must specify an Event Category name (Music, Videos, Games...).");
+            throw new Exception('You must specify an Event Category name (Music, Videos, Games...).');
         }
         if (strlen($action) == 0) {
-            throw new Exception("You must specify an Event action (click, view, add...).");
+            throw new Exception('You must specify an Event action (click, view, add...).');
         }
 
         $url .= '&e_c=' . urlencode($category);
@@ -863,18 +866,18 @@ class Tracker
      * Builds URL to track a content impression.
      *
      * @see doTrackContentImpression()
-     * @param string $contentName The name of the content. For instance 'Ad Foo Bar'
-     * @param string $contentPiece The actual content. For instance the path to an image, video, audio, any text
-     * @param string|false $contentTarget (optional) The target of the content. For instance the URL of a landing page.
-     * @throws Exception In case $contentName is empty
-     * @return string URL to piwik.php with all parameters set to track the pageview
+     * @param  string       $contentName   The name of the content. For instance 'Ad Foo Bar'
+     * @param  string       $contentPiece  The actual content. For instance the path to an image, video, audio, any text
+     * @param  string|false $contentTarget (optional) The target of the content. For instance the URL of a landing page.
+     * @throws Exception    In case $contentName is empty
+     * @return string       URL to piwik.php with all parameters set to track the pageview
      */
     public function getUrlTrackContentImpression(string $contentName, string $contentPiece, $contentTarget): string
     {
         $url = $this->getRequest($this->idSite);
 
         if (strlen($contentName) == 0) {
-            throw new Exception("You must specify a content name");
+            throw new Exception('You must specify a content name');
         }
 
         $url .= '&c_n=' . urlencode($contentName);
@@ -893,23 +896,23 @@ class Tracker
      * Builds URL to track a content impression.
      *
      * @see doTrackContentInteraction()
-     * @param string $interaction The name of the interaction with the content. For instance a 'click'
-     * @param string $contentName The name of the content. For instance 'Ad Foo Bar'
-     * @param string $contentPiece The actual content. For instance the path to an image, video, audio, any text
-     * @param string|false $contentTarget (optional) The target the content leading to when an interaction occurs. For instance the URL of a landing page.
-     * @throws Exception In case $interaction or $contentName is empty
-     * @return string URL to piwik.php with all parameters set to track the pageview
+     * @param  string       $interaction   The name of the interaction with the content. For instance a 'click'
+     * @param  string       $contentName   The name of the content. For instance 'Ad Foo Bar'
+     * @param  string       $contentPiece  The actual content. For instance the path to an image, video, audio, any text
+     * @param  string|false $contentTarget (optional) The target the content leading to when an interaction occurs. For instance the URL of a landing page.
+     * @throws Exception    In case $interaction or $contentName is empty
+     * @return string       URL to piwik.php with all parameters set to track the pageview
      */
     public function getUrlTrackContentInteraction(string $interaction, string $contentName, string $contentPiece, $contentTarget): string
     {
         $url = $this->getRequest($this->idSite);
 
         if (strlen($interaction) == 0) {
-            throw new Exception("You must specify a name for the interaction");
+            throw new Exception('You must specify a name for the interaction');
         }
 
         if (strlen($contentName) == 0) {
-            throw new Exception("You must specify a content name");
+            throw new Exception('You must specify a content name');
         }
 
         $url .= '&c_i=' . urlencode($interaction);
@@ -938,7 +941,7 @@ class Tracker
             $url .= '&search_cat=' . urlencode($category);
         }
         if (!empty($countResults) || $countResults === 0) {
-            $url .= '&search_count=' . (int)$countResults;
+            $url .= '&search_count=' . (int) $countResults;
         }
 
         return $url;
@@ -948,8 +951,8 @@ class Tracker
      * Builds URL to track a goal with idGoal and revenue.
      *
      * @see doTrackGoal()
-     * @param int $idGoal Id Goal to record a conversion
-     * @param float $revenue Revenue for this conversion
+     * @param  int    $idGoal  Id Goal to record a conversion
+     * @param  float  $revenue Revenue for this conversion
      * @return string URL to piwik.php with all parameters set to track the goal conversion
      */
     public function getUrlTrackGoal(int $idGoal, float $revenue = 0.0): string
@@ -968,8 +971,8 @@ class Tracker
      * Builds URL to track a new action.
      *
      * @see doTrackAction()
-     * @param string $actionUrl URL of the download or outlink
-     * @param string $actionType Type of the action: 'download' or 'link'
+     * @param  string $actionUrl  URL of the download or outlink
+     * @param  string $actionType Type of the action: 'download' or 'link'
      * @return string URL to piwik.php with all parameters set to track an action
      */
     public function getUrlTrackAction(string $actionUrl, string $actionType): string
@@ -987,8 +990,8 @@ class Tracker
      *
      * Allowed only for Admin/Super User, must be used along with setTokenAuth()
      * @see setTokenAuth()
-     * @param string $dateTime Date with the format 'Y-m-d H:i:s', or a UNIX timestamp. 
-     *               If the datetime is older than one day (default value for tracking_requests_require_authentication_when_custom_timestamp_newer_than), then you must call setTokenAuth() with a valid Admin/Super user token.
+     * @param string $dateTime Date with the format 'Y-m-d H:i:s', or a UNIX timestamp.
+     *                         If the datetime is older than one day (default value for tracking_requests_require_authentication_when_custom_timestamp_newer_than), then you must call setTokenAuth() with a valid Admin/Super user token.
      */
     public function setForceVisitDateTime(string $dateTime): self
     {
@@ -1026,7 +1029,7 @@ class Tracker
      *
      * A User ID can be a username, UUID or an email address, or any number or string that uniquely identifies a user or client.
      *
-     * @param string $userId Any user ID string (eg. email address, ID, username). Must be non empty. Set to false to de-assign a user id previously set.
+     * @param  string    $userId Any user ID string (eg. email address, ID, username). Must be non empty. Set to false to de-assign a user id previously set.
      * @throws Exception
      */
     public function setUserId(string $userId): self
@@ -1036,7 +1039,7 @@ class Tracker
             return $this;
         }
         if ($userId === '') {
-            throw new Exception("User ID cannot be empty.");
+            throw new Exception('User ID cannot be empty.');
         }
         $this->userId = $userId;
         return $this;
@@ -1065,7 +1068,7 @@ class Tracker
      * If not set, the visitor ID will be fetched from the 1st party cookie, or will be set to a random UUID.
      *
      * @deprecated We recommend to use  ->setUserId($userId).
-     * @param string $visitorId 16 hexadecimal characters visitor ID, eg. "33c31e01394bdc63"
+     * @param  string    $visitorId 16 hexadecimal characters visitor ID, eg. "33c31e01394bdc63"
      * @throws Exception
      */
     public function setVisitorId(string $visitorId): self
@@ -1075,11 +1078,11 @@ class Tracker
             || strspn($visitorId, $hexChars) !== strlen($visitorId)
         ) {
             throw new Exception(
-                "setVisitorId() expects a "
+                'setVisitorId() expects a '
                 . self::LENGTH_VISITOR_ID
-                . " characters hexadecimal string (containing only the following: "
+                . ' characters hexadecimal string (containing only the following: '
                 . $hexChars
-                . ")"
+                . ')'
             );
         }
         $this->forcedVisitorId = $visitorId;
@@ -1149,7 +1152,7 @@ class Tracker
         didn't change any existing VisitorId value */
         $this->cookieVisitorId = $parts[0];
         $this->createTs = $parts[1];
-        $this->visitCount = (int)$parts[2];
+        $this->visitCount = (int) $parts[2];
         $this->currentVisitTs = $parts[3];
         $this->lastVisitTs = $parts[4];
         if (isset($parts[5])) {
@@ -1213,9 +1216,9 @@ class Tracker
     public function setLocalTime(string $time): self
     {
         list($hour, $minute, $second) = explode(':', $time);
-        $this->localHour = (int)$hour;
-        $this->localMinute = (int)$minute;
-        $this->localSecond = (int)$second;
+        $this->localHour = (int) $hour;
+        $this->localMinute = (int) $minute;
+        $this->localSecond = (int) $second;
         return $this;
     }
 
@@ -1261,18 +1264,17 @@ class Tracker
         bool $windowsMedia = false,
         bool $gears = false,
         bool $silverlight = false
-    ): self
-    {
+    ): self {
         $this->plugins =
-            '&fla=' . (int)$flash .
-            '&java=' . (int)$java .
-            '&dir=' . (int)$director .
-            '&qt=' . (int)$quickTime .
-            '&realp=' . (int)$realPlayer .
-            '&pdf=' . (int)$pdf .
-            '&wma=' . (int)$windowsMedia .
-            '&gears=' . (int)$gears .
-            '&ag=' . (int)$silverlight;
+            '&fla=' . (int) $flash .
+            '&java=' . (int) $java .
+            '&dir=' . (int) $director .
+            '&qt=' . (int) $quickTime .
+            '&realp=' . (int) $realPlayer .
+            '&pdf=' . (int) $pdf .
+            '&wma=' . (int) $windowsMedia .
+            '&gears=' . (int) $gears .
+            '&ag=' . (int) $silverlight;
         return $this;
     }
 
@@ -1328,7 +1330,7 @@ class Tracker
     private function getProxy()
     {
         if (isset($this->proxy) && isset($this->proxyPort)) {
-            return $this->proxy.":".$this->proxyPort;
+            return $this->proxy.':'.$this->proxyPort;
         }
         return null;
     }
@@ -1338,10 +1340,11 @@ class Tracker
      *
      * @ignore
      */
-    static public $DEBUG_LAST_REQUESTED_URL = false;
+    public static $DEBUG_LAST_REQUESTED_URL = false;
 
     /**
      * @ignore
+     * @param null|mixed $data
      */
     protected function sendRequest(string $url, string $method = 'GET', $data = null, bool $force = false)
     {
@@ -1409,7 +1412,7 @@ class Tracker
                 $options[CURLOPT_COOKIE] = http_build_query($this->outgoingTrackerCookies);
                 $this->outgoingTrackerCookies = [];
             }
-            
+
             $ch = curl_init();
             curl_setopt_array($ch, $options);
             ob_start();
@@ -1420,15 +1423,14 @@ class Tracker
             if (!empty($response)) {
                 list($header, $content) = explode("\r\n\r\n", $response, $limitCount = 2);
             }
-            
-            $this->parseIncomingCookies(explode("\r\n", $header));
 
+            $this->parseIncomingCookies(explode("\r\n", $header));
         } elseif (function_exists('stream_context_create')) {
             $stream_options = [
                 'http' => [
                     'method' => $method,
                     'user_agent' => $userAgent,
-                    'header' => "Accept-Language: " . $acceptLanguage . "\r\n",
+                    'header' => 'Accept-Language: ' . $acceptLanguage . "\r\n",
                     'timeout' => $this->requestTimeout, // PHP 5.2.1
                 ],
             ];
@@ -1447,11 +1449,11 @@ class Tracker
                 $stream_options['http']['header'] .= 'Cookie: ' . http_build_query($this->outgoingTrackerCookies) . "\r\n";
                 $this->outgoingTrackerCookies = [];
             }
-            
+
             $ctx = stream_context_create($stream_options);
             $response = file_get_contents($url, 0, $ctx);
             $content = $response;
-            
+
             $this->parseIncomingCookies($http_response_header);
         }
 
@@ -1541,7 +1543,7 @@ class Tracker
             (!empty($this->visitorCustomVar) ? '&_cvar=' . urlencode(json_encode($this->visitorCustomVar)) : '') .
             (!empty($this->pageCustomVar) ? '&cvar=' . urlencode(json_encode($this->pageCustomVar)) : '') .
             (!empty($this->eventCustomVar) ? '&e_cvar=' . urlencode(json_encode($this->eventCustomVar)) : '') .
-            (!empty($this->generationTime) ? '&gt_ms=' . ((int)$this->generationTime) : '') .
+            (!empty($this->generationTime) ? '&gt_ms=' . ((int) $this->generationTime) : '') .
             (!empty($this->forcedVisitorId) ? '&cid=' . $this->forcedVisitorId : '&_id=' . $this->getVisitorId()) .
 
             // URL parameters
@@ -1575,7 +1577,6 @@ class Tracker
             // DEBUG
             $this->DEBUG_APPEND_URL;
 
-
         // Reset page level custom variables after this page view
         $this->pageCustomVar = [];
         $this->eventCustomVar = [];
@@ -1586,7 +1587,6 @@ class Tracker
 
         return $url;
     }
-
 
     /**
      * Returns a first party cookie which name contains $name
@@ -1698,12 +1698,11 @@ class Tracker
     {
         if ($value === null) {
             unset($this->outgoingTrackerCookies[$name]);
-        }
-        else {
+        } else {
             $this->outgoingTrackerCookies[$name] = $value;
         }
     }
-  
+
     /**
      * Gets a cookie which was set by the tracking server.
      *
@@ -1716,7 +1715,7 @@ class Tracker
         if (isset($this->incomingTrackerCookies[$name])) {
             return $this->incomingTrackerCookies[$name];
         }
-        
+
         return false;
     }
 
@@ -1728,12 +1727,12 @@ class Tracker
     protected function parseIncomingCookies(array $headers)
     {
         $this->incomingTrackerCookies = [];
-        
+
         if (!empty($headers)) {
             $headerName = 'set-cookie:';
             $headerNameLength = strlen($headerName);
-            
-            foreach($headers as $header) {
+
+            foreach ($headers as $header) {
                 if (strpos(strtolower($header), $headerName) !== 0) {
                     continue;
                 }
@@ -1744,6 +1743,6 @@ class Tracker
                 }
                 parse_str($cookies, $this->incomingTrackerCookies);
             }
-        }   
+        }
     }
 }
